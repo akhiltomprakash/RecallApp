@@ -76,6 +76,15 @@ export type SubjectStats = {
   retentionRate: number;
 };
 
+export type AppStats = {
+  totalNotes: number;
+  totalCards: number;
+  dueToday: number;
+  retentionRate: number;
+  reviewsLast7Days: number;
+  streak: number;
+};
+
 export type NoteDetails = {
   id: number;
   deck_id: number;
@@ -635,6 +644,51 @@ export function getSubjectStats(subjectId: number): SubjectStats {
     dueToday,
     retentionRate: totalCount > 0 ? goodCount / totalCount : 0,
   };
+}
+
+export function getAppStats(): AppStats {
+  const homeStats = getReviewHomeStats();
+
+  const retention = db.getFirstSync<{ goodCount: number | null; totalCount: number }>(
+    `SELECT
+       SUM(CASE WHEN rating >= 3 THEN 1 ELSE 0 END) AS goodCount,
+       COUNT(*) AS totalCount
+     FROM review_logs;`
+  );
+  const goodCount = retention?.goodCount ?? 0;
+  const totalCount = retention?.totalCount ?? 0;
+
+  const reviewsLast7Days = db.getFirstSync<{ total: number }>(
+    `SELECT COUNT(*) AS total
+     FROM review_logs
+     WHERE reviewed_at >= ?;`,
+    [now() - 7 * 24 * 60 * 60]
+  )?.total ?? 0;
+
+  return {
+    totalNotes: homeStats.totalNotes,
+    totalCards: homeStats.totalCards,
+    dueToday: homeStats.totalDueToday,
+    retentionRate: totalCount > 0 ? goodCount / totalCount : 0,
+    reviewsLast7Days,
+    streak: homeStats.streak,
+  };
+}
+
+export function clearLocalDemoData(): void {
+  db.withTransactionSync(() => {
+    db.runSync('DELETE FROM review_logs;');
+    db.runSync('DELETE FROM card_state;');
+    db.runSync('DELETE FROM cards;');
+    db.runSync('DELETE FROM notes;');
+    db.runSync('DELETE FROM decks;');
+
+    db.runSync(
+      `INSERT INTO decks (name, description, icon_key, color_key)
+       VALUES (?, ?, ?, ?);`,
+      ['General', 'Catch-all notes', defaultSubjectIcon.iconKey, defaultSubjectIcon.colorKey]
+    );
+  });
 }
 
 // Compatibility wrappers for existing code paths still using deck terminology.

@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import KiwiBottomNav from '../components/KiwiBottomNav';
 import KiwiButton from '../components/KiwiButton';
 import KiwiScreen from '../components/KiwiScreen';

@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from 'expo-router';
 import KiwiScreen from '../../components/KiwiScreen';
 import KiwiTopBar from '../../components/KiwiTopBar';
 import KiwiButton from '../../components/KiwiButton';
