@@ -1,10 +1,38 @@
 import { db } from './schema';
 
-export type DeckSummary = {
+export type SubjectRow = {
   id: number;
   name: string;
   description: string | null;
+  iconKey: string;
+  colorKey: string;
+  createdAt: number;
+};
+
+export type SubjectSummary = {
+  id: number;
+  name: string;
+  description: string | null;
+  iconKey: string;
+  colorKey: string;
+  noteCount: number;
+  cardCount: number;
   dueCount: number;
+};
+
+export type SubjectDetails = SubjectRow & {
+  noteCount: number;
+  cardCount: number;
+  dueCount: number;
+};
+
+export type NoteRow = {
+  id: number;
+  deck_id: number;
+  title: string;
+  body: string;
+  created_at: number;
+  updated_at: number;
 };
 
 export type CardStateRow = {
@@ -23,118 +51,439 @@ export type CardStateRow = {
 export type DueCardRow = {
   id: number;
   deck_id: number;
+  deck_name: string;
+  note_id: number | null;
   front: string;
   back: string;
   card_type: string;
+  created_at: number;
   state: CardStateRow;
 };
 
-const now = (): number => Math.floor(Date.now() / 1000);
-
-const getScalar = (result: any, index = 0): number => {
-  return result.rows.item(index)[Object.keys(result.rows.item(index))[0]] as number;
+export type ReviewHomeStats = {
+  totalDueToday: number;
+  streak: number;
+  subjectCount: number;
+  totalCards: number;
+  totalNotes: number;
 };
 
-export function createDeck(name: string, description: string = ''): number {
-  const result: any = db.executeSql(
-    'INSERT INTO decks (name, description) VALUES (?, ?);',
-    [name, description || null]
-  );
+export type SubjectStats = {
+  totalNotes: number;
+  totalCards: number;
+  learnedCards: number;
+  dueToday: number;
+  retentionRate: number;
+};
 
-  return result.insertId as number;
+export type NoteDetails = {
+  id: number;
+  deck_id: number;
+  title: string;
+  body: string;
+  created_at: number;
+  updated_at: number;
+  subjectName: string;
+  subjectDescription: string | null;
+  subjectIconKey: string;
+  subjectColorKey: string;
+};
+
+export type NoteLinkedCard = {
+  id: number;
+  front: string;
+  back: string;
+  card_type: string;
+  due: number;
+  state: number;
+  scheduled_days: number;
+};
+
+export type CardInput = {
+  front: string;
+  back: string;
+  cardType?: string;
+};
+
+export type SubjectIconOption = {
+  iconKey: string;
+  colorKey: string;
+  label: string;
+  iconColor: string;
+  backgroundColor: string;
+};
+
+const subjectIconOptions: SubjectIconOption[] = [
+  { iconKey: 'book-open', colorKey: 'slate', label: 'General', iconColor: '#334155', backgroundColor: '#E2E8F0' },
+  { iconKey: 'sprout', colorKey: 'emerald', label: 'Biology', iconColor: '#15803D', backgroundColor: '#DCFCE7' },
+  { iconKey: 'plug', colorKey: 'rose', label: 'Electronics', iconColor: '#BE123C', backgroundColor: '#FFE4E6' },
+  { iconKey: 'landmark', colorKey: 'amber', label: 'History', iconColor: '#B45309', backgroundColor: '#FEF3C7' },
+  { iconKey: 'code', colorKey: 'indigo', label: 'Programming', iconColor: '#3730A3', backgroundColor: '#E0E7FF' },
+  { iconKey: 'microscope', colorKey: 'teal', label: 'Science', iconColor: '#0F766E', backgroundColor: '#CCFBF1' },
+  { iconKey: 'calculator', colorKey: 'blue', label: 'Math', iconColor: '#1D4ED8', backgroundColor: '#DBEAFE' },
+  { iconKey: 'atom', colorKey: 'cyan', label: 'Chemistry', iconColor: '#0E7490', backgroundColor: '#CFFAFE' },
+  { iconKey: 'globe', colorKey: 'sky', label: 'Geography', iconColor: '#0369A1', backgroundColor: '#E0F2FE' },
+  { iconKey: 'languages', colorKey: 'violet', label: 'Languages', iconColor: '#6D28D9', backgroundColor: '#EDE9FE' },
+  { iconKey: 'briefcase', colorKey: 'stone', label: 'Business', iconColor: '#44403C', backgroundColor: '#E7E5E4' },
+  { iconKey: 'scale', colorKey: 'zinc', label: 'Law', iconColor: '#3F3F46', backgroundColor: '#E4E4E7' },
+  { iconKey: 'heart-pulse', colorKey: 'red', label: 'Medicine', iconColor: '#B91C1C', backgroundColor: '#FEE2E2' },
+  { iconKey: 'music-4', colorKey: 'pink', label: 'Music', iconColor: '#BE185D', backgroundColor: '#FCE7F3' },
+  { iconKey: 'palette', colorKey: 'fuchsia', label: 'Art', iconColor: '#A21CAF', backgroundColor: '#FAE8FF' },
+  { iconKey: 'film', colorKey: 'purple', label: 'Cinema', iconColor: '#7E22CE', backgroundColor: '#F3E8FF' },
+  { iconKey: 'dumbbell', colorKey: 'orange', label: 'Fitness', iconColor: '#C2410C', backgroundColor: '#FFEDD5' },
+  { iconKey: 'brain', colorKey: 'lime', label: 'Memory', iconColor: '#4D7C0F', backgroundColor: '#ECFCCB' },
+  { iconKey: 'rocket', colorKey: 'cyan-dark', label: 'Projects', iconColor: '#155E75', backgroundColor: '#CFFAFE' },
+  { iconKey: 'notebook-pen', colorKey: 'blue-dark', label: 'Notes', iconColor: '#1E3A8A', backgroundColor: '#DBEAFE' },
+];
+
+const now = (): number => Math.floor(Date.now() / 1000);
+
+const toLocalDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const escapeLike = (text: string): string =>
+  text.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+
+const normalizeText = (value: string): string => value.trim();
+
+const defaultSubjectIcon = subjectIconOptions[0];
+
+export function getSubjectIconOptions(): SubjectIconOption[] {
+  return [...subjectIconOptions];
 }
 
-export function getDecks(): DeckSummary[] {
-  const result: any = db.executeSql(
-    `SELECT decks.id, decks.name, decks.description, COUNT(card_state.card_id) AS dueCount
-     FROM decks
-     LEFT JOIN cards ON decks.id = cards.deck_id
-     LEFT JOIN card_state ON cards.id = card_state.card_id AND card_state.due <= ?
-     GROUP BY decks.id;`,
-    [now()]
-  );
+export function createSubject(
+  name: string,
+  description: string = '',
+  iconKey: string = defaultSubjectIcon.iconKey,
+  colorKey: string = defaultSubjectIcon.colorKey
+): number {
+  const subjectName = normalizeText(name);
 
-  const rows: DeckSummary[] = [];
-
-  for (let i = 0; i < result.rows.length; i += 1) {
-    const item = result.rows.item(i);
-    rows.push({
-      id: item.id,
-      name: item.name,
-      description: item.description,
-      dueCount: item.dueCount,
-    });
+  if (!subjectName) {
+    throw new Error('Subject name is required.');
   }
 
-  return rows;
+  const normalizedIconKey = normalizeText(iconKey) || defaultSubjectIcon.iconKey;
+  const normalizedColorKey = normalizeText(colorKey) || defaultSubjectIcon.colorKey;
+  const result = db.runSync(
+    `INSERT INTO decks (name, description, icon_key, color_key)
+     VALUES (?, ?, ?, ?);`,
+    [subjectName, description.trim() || null, normalizedIconKey, normalizedColorKey]
+  );
+
+  return result.lastInsertRowId;
+}
+
+export function getSubjects(): SubjectSummary[] {
+  return db.getAllSync<SubjectSummary>(
+    `SELECT
+       d.id,
+       d.name,
+       d.description,
+       COALESCE(d.icon_key, ?) AS iconKey,
+       COALESCE(d.color_key, ?) AS colorKey,
+       (SELECT COUNT(*) FROM notes n WHERE n.deck_id = d.id) AS noteCount,
+       (SELECT COUNT(*) FROM cards c WHERE c.deck_id = d.id) AS cardCount,
+       (
+         SELECT COUNT(*)
+         FROM cards c
+         JOIN card_state cs ON cs.card_id = c.id
+         WHERE c.deck_id = d.id AND cs.due <= ?
+       ) AS dueCount
+     FROM decks d
+     ORDER BY lower(d.name), d.id;`,
+    [defaultSubjectIcon.iconKey, defaultSubjectIcon.colorKey, now()]
+  );
+}
+
+export function getSubjectById(subjectId: number): SubjectDetails | null {
+  return (
+    db.getFirstSync<SubjectDetails>(
+      `SELECT
+         d.id,
+         d.name,
+         d.description,
+         COALESCE(d.icon_key, ?) AS iconKey,
+         COALESCE(d.color_key, ?) AS colorKey,
+         d.created_at AS createdAt,
+         (SELECT COUNT(*) FROM notes n WHERE n.deck_id = d.id) AS noteCount,
+         (SELECT COUNT(*) FROM cards c WHERE c.deck_id = d.id) AS cardCount,
+         (
+           SELECT COUNT(*)
+           FROM cards c
+           JOIN card_state cs ON cs.card_id = c.id
+           WHERE c.deck_id = d.id AND cs.due <= ?
+         ) AS dueCount
+       FROM decks d
+       WHERE d.id = ?;`,
+      [defaultSubjectIcon.iconKey, defaultSubjectIcon.colorKey, now(), subjectId]
+    ) ?? null
+  );
+}
+
+export function getNotesForSubject(subjectId: number, searchQuery?: string): NoteRow[] {
+  const query = normalizeText(searchQuery ?? '');
+
+  if (!query) {
+    return db.getAllSync<NoteRow>(
+      `SELECT id, deck_id, title, body, created_at, updated_at
+       FROM notes
+       WHERE deck_id = ?
+       ORDER BY updated_at DESC, id DESC;`,
+      [subjectId]
+    );
+  }
+
+  const likeQuery = `%${escapeLike(query)}%`;
+  return db.getAllSync<NoteRow>(
+    `SELECT id, deck_id, title, body, created_at, updated_at
+     FROM notes
+     WHERE deck_id = ?
+       AND (title LIKE ? ESCAPE '\\' OR body LIKE ? ESCAPE '\\')
+     ORDER BY updated_at DESC, id DESC;`,
+    [subjectId, likeQuery, likeQuery]
+  );
+}
+
+export function getNoteById(noteId: number): NoteDetails | null {
+  return (
+    db.getFirstSync<NoteDetails>(
+      `SELECT
+         n.id,
+         n.deck_id,
+         n.title,
+         n.body,
+         n.created_at,
+         n.updated_at,
+         d.name AS subjectName,
+         d.description AS subjectDescription,
+         COALESCE(d.icon_key, ?) AS subjectIconKey,
+         COALESCE(d.color_key, ?) AS subjectColorKey
+       FROM notes n
+       JOIN decks d ON d.id = n.deck_id
+       WHERE n.id = ?;`,
+      [defaultSubjectIcon.iconKey, defaultSubjectIcon.colorKey, noteId]
+    ) ?? null
+  );
+}
+
+export function getCardsForNote(noteId: number): NoteLinkedCard[] {
+  return db.getAllSync<NoteLinkedCard>(
+    `SELECT
+       c.id,
+       c.front,
+       c.back,
+       c.card_type,
+       cs.due,
+       cs.state,
+       cs.scheduled_days
+     FROM cards c
+     JOIN card_state cs ON cs.card_id = c.id
+     WHERE c.note_id = ?
+     ORDER BY cs.due ASC, c.id ASC;`,
+    [noteId]
+  );
+}
+
+export function getDueCardsForNote(noteId: number): number {
+  return (
+    db.getFirstSync<{ total: number }>(
+      `SELECT COUNT(*) AS total
+       FROM cards c
+       JOIN card_state cs ON cs.card_id = c.id
+       WHERE c.note_id = ? AND cs.due <= ?;`,
+      [noteId, now()]
+    )?.total ?? 0
+  );
+}
+
+export function createNote(subjectId: number, title: string, body: string): number {
+  const noteTitle = normalizeText(title);
+  const noteBody = normalizeText(body);
+
+  if (!noteTitle || !noteBody) {
+    throw new Error('Note title and body are required.');
+  }
+
+  const timestamp = now();
+  const result = db.runSync(
+    `INSERT INTO notes (deck_id, title, body, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?);`,
+    [subjectId, noteTitle, noteBody, timestamp, timestamp]
+  );
+
+  return result.lastInsertRowId;
+}
+
+export function updateNote(noteId: number, title: string, body: string): boolean {
+  const noteTitle = normalizeText(title);
+  const noteBody = normalizeText(body);
+
+  if (!noteTitle || !noteBody) {
+    throw new Error('Note title and body are required.');
+  }
+
+  const result = db.runSync(
+    `UPDATE notes
+     SET title = ?, body = ?, updated_at = ?
+     WHERE id = ?;`,
+    [noteTitle, noteBody, now(), noteId]
+  );
+
+  return result.changes > 0;
+}
+
+export function deleteNote(noteId: number): void {
+  db.runSync('DELETE FROM notes WHERE id = ?;', [noteId]);
 }
 
 export function addCard(
-  deckId: number,
+  subjectId: number,
   front: string,
   back: string,
+  noteId: number | null = null,
   cardType: string = 'basic'
 ): number {
-  const insertCard: any = db.executeSql(
-    'INSERT INTO cards (deck_id, front, back, card_type) VALUES (?, ?, ?, ?);',
-    [deckId, front, back, cardType]
-  );
+  const normalizedFront = normalizeText(front);
+  const normalizedBack = normalizeText(back);
 
-  const cardId = insertCard.insertId as number;
+  if (!normalizedFront || !normalizedBack) {
+    throw new Error('Card front and back are required.');
+  }
 
-  db.executeSql(
-    `INSERT INTO card_state (
-      card_id,
-      due,
-      stability,
-      difficulty,
-      elapsed_days,
-      scheduled_days,
-      reps,
-      lapses,
-      state,
-      last_review
-    ) VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, NULL);`,
-    [cardId, now()]
-  );
+  let cardId = 0;
+
+  db.withTransactionSync(() => {
+    const cardInsert = db.runSync(
+      `INSERT INTO cards (deck_id, note_id, front, back, card_type, created_at)
+       VALUES (?, ?, ?, ?, ?, ?);`,
+      [subjectId, noteId, normalizedFront, normalizedBack, cardType, now()]
+    );
+    cardId = cardInsert.lastInsertRowId;
+
+    db.runSync(
+      `INSERT INTO card_state (
+         card_id,
+         due,
+         stability,
+         difficulty,
+         elapsed_days,
+         scheduled_days,
+         reps,
+         lapses,
+         state,
+         last_review
+       ) VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, NULL);`,
+      [cardId, now()]
+    );
+  });
 
   return cardId;
 }
 
-export function getDueCards(deckId: number): DueCardRow[] {
-  const result: any = db.executeSql(
+export function addCardsForNote(
+  subjectId: number,
+  noteId: number,
+  cards: CardInput[]
+): number[] {
+  const createdCardIds: number[] = [];
+
+  db.withTransactionSync(() => {
+    for (const card of cards) {
+      const front = normalizeText(card.front);
+      const back = normalizeText(card.back);
+
+      if (!front || !back) {
+        continue;
+      }
+
+      const cardInsert = db.runSync(
+        `INSERT INTO cards (deck_id, note_id, front, back, card_type, created_at)
+         VALUES (?, ?, ?, ?, ?, ?);`,
+        [subjectId, noteId, front, back, card.cardType ?? 'basic', now()]
+      );
+      const cardId = cardInsert.lastInsertRowId;
+      createdCardIds.push(cardId);
+
+      db.runSync(
+        `INSERT INTO card_state (
+           card_id,
+           due,
+           stability,
+           difficulty,
+           elapsed_days,
+           scheduled_days,
+           reps,
+           lapses,
+           state,
+           last_review
+         ) VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0, NULL);`,
+        [cardId, now()]
+      );
+    }
+  });
+
+  return createdCardIds;
+}
+
+export function getDueCards(subjectId?: number): DueCardRow[] {
+  const rows = db.getAllSync<
+    Omit<DueCardRow, 'state'> & {
+      state_card_id: number;
+      due: number;
+      stability: number;
+      difficulty: number;
+      elapsed_days: number;
+      scheduled_days: number;
+      reps: number;
+      lapses: number;
+      state: number;
+      last_review: number | null;
+    }
+  >(
     `SELECT
-       cards.id,
-       cards.deck_id,
-       cards.front,
-       cards.back,
-       cards.card_type,
-       card_state.card_id AS state_card_id,
-       card_state.due,
-       card_state.stability,
-       card_state.difficulty,
-       card_state.elapsed_days,
-       card_state.scheduled_days,
-       card_state.reps,
-       card_state.lapses,
-       card_state.state,
-       card_state.last_review
-     FROM cards
-     JOIN card_state ON cards.id = card_state.card_id
-     WHERE cards.deck_id = ? AND card_state.due <= ?;`,
-    [deckId, now()]
+       c.id,
+       c.deck_id,
+       d.name AS deck_name,
+       c.note_id,
+       c.front,
+       c.back,
+       c.card_type,
+       c.created_at,
+       cs.card_id AS state_card_id,
+       cs.due,
+       cs.stability,
+       cs.difficulty,
+       cs.elapsed_days,
+       cs.scheduled_days,
+       cs.reps,
+       cs.lapses,
+       cs.state,
+       cs.last_review
+     FROM cards c
+     JOIN card_state cs ON c.id = cs.card_id
+     JOIN decks d ON d.id = c.deck_id
+     WHERE cs.due <= ?
+       AND (? IS NULL OR c.deck_id = ?)
+     ORDER BY cs.due ASC, c.id ASC;`,
+    [now(), subjectId ?? null, subjectId ?? null]
   );
 
-  const rows: DueCardRow[] = [];
-
-  for (let i = 0; i < result.rows.length; i += 1) {
-    const item = result.rows.item(i);
-    rows.push({
+  return rows.map((item) => {
+    return {
       id: item.id,
       deck_id: item.deck_id,
+      deck_name: item.deck_name,
+      note_id: item.note_id,
       front: item.front,
       back: item.back,
       card_type: item.card_type,
+      created_at: item.created_at,
       state: {
         card_id: item.state_card_id,
         due: item.due,
@@ -147,24 +496,21 @@ export function getDueCards(deckId: number): DueCardRow[] {
         state: item.state,
         last_review: item.last_review,
       },
-    });
-  }
-
-  return rows;
+    };
+  });
 }
 
 export function updateCardState(cardId: number, newState: Partial<CardStateRow>, rating: number): void {
-  const selectResult: any = db.executeSql(
+  const oldState = db.getFirstSync<CardStateRow>(
     'SELECT * FROM card_state WHERE card_id = ?;',
     [cardId]
   );
 
-  if (selectResult.rows.length === 0) {
+  if (!oldState) {
     throw new Error(`Card state not found for cardId ${cardId}`);
   }
 
-  const oldState = selectResult.rows.item(0) as CardStateRow;
-  const updatedState = { ...oldState, ...newState } as CardStateRow;
+  const updatedState = { ...oldState, ...newState };
   const stateBefore = JSON.stringify(oldState);
   const stateAfter = JSON.stringify(updatedState);
 
@@ -182,22 +528,136 @@ export function updateCardState(cardId: number, newState: Partial<CardStateRow>,
 
   const entries = Object.entries(newState).filter(([key]) =>
     allowedKeys.includes(key as keyof CardStateRow)
-  ) as Array<[keyof CardStateRow, any]>;
+  ) as Array<[keyof CardStateRow, number | null]>;
 
-  if (entries.length > 0) {
-    const setClause = entries.map(([key]) => `${key} = ?`).join(', ');
-    const values = entries.map(([, value]) => value);
-    db.executeSql(`UPDATE card_state SET ${setClause} WHERE card_id = ?;`, [
-      ...values,
-      cardId,
-    ]);
+  db.withTransactionSync(() => {
+    if (entries.length > 0) {
+      const setClause = entries.map(([key]) => `${key} = ?`).join(', ');
+      const values = entries.map(([, value]) => value);
+      db.runSync(`UPDATE card_state SET ${setClause} WHERE card_id = ?;`, [...values, cardId]);
+    }
+
+    db.runSync(
+      `INSERT INTO review_logs (card_id, rating, reviewed_at, state_before, state_after)
+       VALUES (?, ?, ?, ?, ?);`,
+      [cardId, rating, now(), stateBefore, stateAfter]
+    );
+  });
+}
+
+export function getReviewHomeStats(): ReviewHomeStats {
+  const due = db.getFirstSync<{ total: number }>(
+    `SELECT COUNT(*) AS total
+     FROM cards c
+     JOIN card_state cs ON cs.card_id = c.id
+     WHERE cs.due <= ?;`,
+    [now()]
+  )?.total ?? 0;
+
+  const subjectCount = db.getFirstSync<{ total: number }>(
+    'SELECT COUNT(*) AS total FROM decks;'
+  )?.total ?? 0;
+
+  const totalCards = db.getFirstSync<{ total: number }>(
+    'SELECT COUNT(*) AS total FROM cards;'
+  )?.total ?? 0;
+
+  const totalNotes = db.getFirstSync<{ total: number }>(
+    'SELECT COUNT(*) AS total FROM notes;'
+  )?.total ?? 0;
+
+  const reviewDates = db.getAllSync<{ reviewDate: string }>(
+    `SELECT DISTINCT date(reviewed_at, 'unixepoch', 'localtime') AS reviewDate
+     FROM review_logs
+     ORDER BY reviewDate DESC;`
+  );
+  const reviewDateSet = new Set(reviewDates.map((row) => row.reviewDate));
+
+  let streak = 0;
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+
+  while (reviewDateSet.has(toLocalDateKey(cursor))) {
+    streak += 1;
+    cursor.setDate(cursor.getDate() - 1);
   }
 
-  db.executeSql(
-    `INSERT INTO review_logs (card_id, rating, state_before, state_after)
-     VALUES (?, ?, ?, ?);`,
-    [cardId, rating, stateBefore, stateAfter]
+  return {
+    totalDueToday: due,
+    streak,
+    subjectCount,
+    totalCards,
+    totalNotes,
+  };
+}
+
+export function getSubjectStats(subjectId: number): SubjectStats {
+  const totals = db.getFirstSync<{ totalNotes: number; totalCards: number }>(
+    `SELECT
+       (SELECT COUNT(*) FROM notes WHERE deck_id = ?) AS totalNotes,
+       (SELECT COUNT(*) FROM cards WHERE deck_id = ?) AS totalCards;`,
+    [subjectId, subjectId]
   );
+
+  const learnedCards = db.getFirstSync<{ learnedCards: number }>(
+    `SELECT COUNT(*) AS learnedCards
+     FROM cards c
+     JOIN card_state cs ON cs.card_id = c.id
+     WHERE c.deck_id = ? AND cs.state >= 2;`,
+    [subjectId]
+  )?.learnedCards ?? 0;
+
+  const dueToday = db.getFirstSync<{ dueToday: number }>(
+    `SELECT COUNT(*) AS dueToday
+     FROM cards c
+     JOIN card_state cs ON cs.card_id = c.id
+     WHERE c.deck_id = ? AND cs.due <= ?;`,
+    [subjectId, now()]
+  )?.dueToday ?? 0;
+
+  const retention = db.getFirstSync<{ goodCount: number | null; totalCount: number }>(
+    `SELECT
+       SUM(CASE WHEN rl.rating >= 3 THEN 1 ELSE 0 END) AS goodCount,
+       COUNT(*) AS totalCount
+     FROM review_logs rl
+     JOIN cards c ON c.id = rl.card_id
+     WHERE c.deck_id = ?;`,
+    [subjectId]
+  );
+
+  const goodCount = retention?.goodCount ?? 0;
+  const totalCount = retention?.totalCount ?? 0;
+
+  return {
+    totalNotes: totals?.totalNotes ?? 0,
+    totalCards: totals?.totalCards ?? 0,
+    learnedCards,
+    dueToday,
+    retentionRate: totalCount > 0 ? goodCount / totalCount : 0,
+  };
+}
+
+// Compatibility wrappers for existing code paths still using deck terminology.
+export type DeckSummary = {
+  id: number;
+  name: string;
+  description: string | null;
+  dueCount: number;
+};
+
+export function createDeck(name: string, description: string = ''): number {
+  return createSubject(name, description);
+}
+
+export function getDecks(): DeckSummary[] {
+  return getSubjects().map((subject) => {
+    return {
+      id: subject.id,
+      name: subject.name,
+      description: subject.description,
+      dueCount: subject.dueCount,
+    };
+  });
 }
 
 export function getDeckStats(deckId: number): {
@@ -206,45 +666,11 @@ export function getDeckStats(deckId: number): {
   dueToday: number;
   retentionRate: number;
 } {
-  const totalResult: any = db.executeSql(
-    'SELECT COUNT(*) AS total FROM cards WHERE deck_id = ?;',
-    [deckId]
-  );
-  const learnedResult: any = db.executeSql(
-    `SELECT COUNT(*) AS learned
-     FROM cards
-     JOIN card_state ON cards.id = card_state.card_id
-     WHERE cards.deck_id = ? AND card_state.state >= 2;`,
-    [deckId]
-  );
-  const dueResult: any = db.executeSql(
-    `SELECT COUNT(*) AS dueToday
-     FROM cards
-     JOIN card_state ON cards.id = card_state.card_id
-     WHERE cards.deck_id = ? AND card_state.due <= ?;`,
-    [deckId, now()]
-  );
-  const retentionResult: any = db.executeSql(
-    `SELECT
-       SUM(CASE WHEN review_logs.rating >= 3 THEN 1 ELSE 0 END) AS goodCount,
-       COUNT(*) AS totalCount
-     FROM review_logs
-     JOIN cards ON review_logs.card_id = cards.id
-     WHERE cards.deck_id = ?;`,
-    [deckId]
-  );
-
-  const total = totalResult.rows.length ? totalResult.rows.item(0).total : 0;
-  const learned = learnedResult.rows.length ? learnedResult.rows.item(0).learned : 0;
-  const dueToday = dueResult.rows.length ? dueResult.rows.item(0).dueToday : 0;
-  const goodCount = retentionResult.rows.length ? retentionResult.rows.item(0).goodCount || 0 : 0;
-  const totalCount = retentionResult.rows.length ? retentionResult.rows.item(0).totalCount || 0 : 0;
-  const retentionRate = totalCount > 0 ? goodCount / totalCount : 0;
-
+  const stats = getSubjectStats(deckId);
   return {
-    total,
-    learned,
-    dueToday,
-    retentionRate,
+    total: stats.totalCards,
+    learned: stats.learnedCards,
+    dueToday: stats.dueToday,
+    retentionRate: stats.retentionRate,
   };
 }

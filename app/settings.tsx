@@ -1,31 +1,23 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import KiwiButton from '../components/KiwiButton';
 import KiwiScreen from '../components/KiwiScreen';
 import KiwiTopBar from '../components/KiwiTopBar';
 import { KIWI_THEME } from '../constants/theme';
 
-export default function ReviewScreen() {
+export default function SettingsScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ subjectName?: string }>();
-  const label = params.subjectName ? String(params.subjectName) : 'All subjects';
 
   return (
     <KiwiScreen>
-      <KiwiTopBar
-        onBackPress={() => router.back()}
-        onSettingsPress={() => router.push('/settings')}
-        title="Review"
-      />
-
+      <KiwiTopBar title="Settings" onBackPress={() => router.back()} />
       <View style={styles.container}>
-        <Text style={styles.title}>Review scope</Text>
-        <Text style={styles.scopeLabel}>{label}</Text>
+        <Text style={styles.title}>Settings</Text>
         <Text style={styles.description}>
-          FSRS review session implementation is planned for the next steps.
+          LLM settings and advanced preferences are planned for the next steps.
         </Text>
-        <KiwiButton label="Back to Revise" onPress={() => router.push('/')} />
+        <KiwiButton label="Back" onPress={() => router.back()} style={styles.button} />
       </View>
     </KiwiScreen>
   );
@@ -38,18 +30,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   title: {
-    color: KIWI_THEME.colors.textSecondary,
-    fontFamily: 'Nunito_500Medium',
-    fontSize: 14,
-    letterSpacing: 0,
-    textAlign: 'center',
-  },
-  scopeLabel: {
     color: KIWI_THEME.colors.textPrimary,
     fontFamily: 'Nunito_600SemiBold',
-    fontSize: 30 / 1.25,
+    fontSize: 24,
     letterSpacing: 0,
-    marginTop: 8,
     textAlign: 'center',
   },
   description: {
@@ -57,8 +41,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_400Regular',
     fontSize: 14,
     letterSpacing: 0,
-    marginBottom: 20,
     marginTop: 8,
     textAlign: 'center',
   },
+  button: {
+    marginTop: 20,
+  },
 });
+
