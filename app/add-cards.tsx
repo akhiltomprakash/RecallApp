@@ -141,6 +141,7 @@ export default function AddCardsScreen() {
       let title = fallbackTitle;
       let cardsToCreate: Array<{ front: string; back: string; cardType: string }> = [...fallbackCards];
       let savedWithAi = false;
+      let aiFailureMessage: string | null = null;
 
       const apiKey = await getGeminiApiKey();
       if (apiKey) {
@@ -162,8 +163,9 @@ export default function AddCardsScreen() {
                   },
                 ];
           savedWithAi = true;
-        } catch {
+        } catch (error) {
           savedWithAi = false;
+          aiFailureMessage = error instanceof Error ? error.message : 'Gemini request failed.';
         }
       }
 
@@ -175,7 +177,7 @@ export default function AddCardsScreen() {
         savedWithAi
           ? 'Saved with AI organization.'
           : apiKey
-            ? 'Saved without AI organization. Gemini request failed.'
+            ? `Saved without AI organization. ${aiFailureMessage ?? 'Gemini request failed.'}`
             : 'Saved without AI organization. No API key found.'
       );
 

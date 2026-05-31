@@ -1,8 +1,18 @@
 import * as SecureStore from 'expo-secure-store';
+import { addLlmLog } from '../db/queries';
 
 const GEMINI_KEY_STORAGE_KEY = 'settings.gemini_api_key';
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
+const GEMINI_API_BASES = [
+  'https://generativelanguage.googleapis.com/v1',
+  'https://generativelanguage.googleapis.com/v1beta',
+];
+const GEMINI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+];
 
 export type GeminiConnectionResult = {
   ok: boolean;
@@ -56,29 +66,36 @@ function extractJsonObject(rawText: string): string {
   return rawText.slice(start, end + 1);
 }
 
-async function runGeminiRequest(apiKey: string, payload: unknown): Promise<Response> {
+type GeminiRequestResult = {
+  response: Response;
+  model: string;
+};
+
+async function runGeminiRequest(apiKey: string, payload: unknown): Promise<GeminiRequestResult> {
   let lastError: Error | null = null;
 
-  for (const model of GEMINI_MODELS) {
-    try {
-      const response = await fetch(
-        `${GEMINI_API_BASE}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
+  for (const baseUrl of GEMINI_API_BASES) {
+    for (const model of GEMINI_MODELS) {
+      try {
+        const response = await fetch(
+          `${baseUrl}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          }
+        );
+
+        if (response.status === 404) {
+          continue;
         }
-      );
 
-      if (response.status === 404) {
-        continue;
+        return { response, model };
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
       }
-
-      return response;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
     }
   }
 
@@ -126,10 +143,9 @@ export async function testGeminiConnection(inputKey?: string): Promise<GeminiCon
   }
 
   try {
-    const response = await fetch(
-      `${GEMINI_API_BASE}/models?key=${encodeURIComponent(apiKey)}`,
-      { method: 'GET' }
-    );
+    const response = await fetch(`${GEMINI_API_BASES[0]}/models?key=${encodeURIComponent(apiKey)}`, {
+      method: 'GET',
+    });
 
     if (!response.ok) {
       const body = await response.text();
@@ -184,38 +200,69 @@ export async function organizeNoteWithGemini(inputText: string): Promise<Organiz
     },
   };
 
-  const response = await runGeminiRequest(apiKey, payload);
-  if (!response.ok) {
-    const body = await response.text();
-    throw mapApiError(response.status, body || 'Gemini did not return a successful response.');
-  }
+  let usedModel: string | null = null;
 
-  const data = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) {
-    throw new Error('Gemini returned an empty response.');
-  }
-
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(extractJsonObject(rawText));
-  } catch {
-    throw new Error('Gemini returned invalid JSON.');
+    const { response, model } = await runGeminiRequest(apiKey, payload);
+    usedModel = model;
+
+    if (!response.ok) {
+      const body = await response.text();
+      throw mapApiError(response.status, body || 'Gemini did not return a successful response.');
+    }
+
+    const data = (await response.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) {
+      throw new Error('Gemini returned an empty response.');
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(extractJsonObject(rawText));
+    } catch {
+      throw new Error('Gemini returned invalid JSON.');
+    }
+
+    const title = sanitizeText((parsed as { title?: unknown }).title, 'Untitled note');
+    const summary = sanitizeText((parsed as { summary?: unknown }).summary, '');
+    const flashcards = normalizeFlashcards((parsed as { flashcards?: unknown }).flashcards);
+
+    if (!summary && flashcards.length === 0) {
+      throw new Error('Gemini response was missing summary and flashcards.');
+    }
+
+    try {
+      addLlmLog({
+        provider: 'gemini',
+        model: usedModel,
+        operation: 'organize_note',
+        status: 'success',
+        inputChars: normalizedInput.length,
+        outputChars: rawText.length,
+      });
+    } catch {}
+
+    return {
+      title,
+      summary: summary || 'Summary unavailable.',
+      flashcards,
+    };
+  } catch (error) {
+    try {
+      addLlmLog({
+        provider: 'gemini',
+        model: usedModel,
+        operation: 'organize_note',
+        status: 'error',
+        inputChars: normalizedInput.length,
+        outputChars: 0,
+        errorMessage: error instanceof Error ? error.message : String(error),
+      });
+    } catch {}
+
+    throw error;
   }
-
-  const title = sanitizeText((parsed as { title?: unknown }).title, 'Untitled note');
-  const summary = sanitizeText((parsed as { summary?: unknown }).summary, '');
-  const flashcards = normalizeFlashcards((parsed as { flashcards?: unknown }).flashcards);
-
-  if (!summary && flashcards.length === 0) {
-    throw new Error('Gemini response was missing summary and flashcards.');
-  }
-
-  return {
-    title,
-    summary: summary || 'Summary unavailable.',
-    flashcards,
-  };
 }

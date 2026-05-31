@@ -114,6 +114,18 @@ export type CardInput = {
   cardType?: string;
 };
 
+export type LlmLogRow = {
+  id: number;
+  provider: string;
+  model: string | null;
+  operation: string;
+  status: string;
+  input_chars: number;
+  output_chars: number;
+  error_message: string | null;
+  created_at: number;
+};
+
 export type SubjectIconOption = {
   iconKey: string;
   colorKey: string;
@@ -677,6 +689,7 @@ export function getAppStats(): AppStats {
 
 export function clearLocalDemoData(): void {
   db.withTransactionSync(() => {
+    db.runSync('DELETE FROM llm_logs;');
     db.runSync('DELETE FROM review_logs;');
     db.runSync('DELETE FROM card_state;');
     db.runSync('DELETE FROM cards;');
@@ -689,6 +702,63 @@ export function clearLocalDemoData(): void {
       ['General', 'Catch-all notes', defaultSubjectIcon.iconKey, defaultSubjectIcon.colorKey]
     );
   });
+}
+
+export function addLlmLog(params: {
+  provider: string;
+  model?: string | null;
+  operation: string;
+  status: string;
+  inputChars?: number;
+  outputChars?: number;
+  errorMessage?: string | null;
+}): void {
+  db.runSync(
+    `INSERT INTO llm_logs (
+       provider,
+       model,
+       operation,
+       status,
+       input_chars,
+       output_chars,
+       error_message,
+       created_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+    [
+      params.provider,
+      params.model ?? null,
+      params.operation,
+      params.status,
+      Math.max(0, params.inputChars ?? 0),
+      Math.max(0, params.outputChars ?? 0),
+      params.errorMessage ?? null,
+      now(),
+    ]
+  );
+}
+
+export function getLlmLogs(limit: number = 100): LlmLogRow[] {
+  const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 500);
+  return db.getAllSync<LlmLogRow>(
+    `SELECT
+       id,
+       provider,
+       model,
+       operation,
+       status,
+       input_chars,
+       output_chars,
+       error_message,
+       created_at
+     FROM llm_logs
+     ORDER BY created_at DESC, id DESC
+     LIMIT ?;`,
+    [safeLimit]
+  );
+}
+
+export function clearLlmLogs(): void {
+  db.runSync('DELETE FROM llm_logs;');
 }
 
 // Compatibility wrappers for existing code paths still using deck terminology.

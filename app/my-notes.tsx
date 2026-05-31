@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -16,7 +17,7 @@ import KiwiScreen from '../components/KiwiScreen';
 import KiwiTopBar from '../components/KiwiTopBar';
 import SubjectCard from '../components/SubjectCard';
 import { KIWI_THEME } from '../constants/theme';
-import { getSubjects, type SubjectSummary } from '../db/queries';
+import { clearLocalDemoData, getSubjects, type SubjectSummary } from '../db/queries';
 import {
   clearGeminiApiKey,
   getGeminiApiKey,
@@ -37,6 +38,7 @@ export default function MyNotesScreen() {
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
   const [isTestingApiKey, setIsTestingApiKey] = useState(false);
   const [isClearingApiKey, setIsClearingApiKey] = useState(false);
+  const [isResettingLocalData, setIsResettingLocalData] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
 
   const loadSubjects = useCallback((refresh = false) => {
@@ -163,6 +165,16 @@ export default function MyNotesScreen() {
             <Pressable
               onPress={() => {
                 setMenuOpen(false);
+                router.push('/llm-log');
+              }}
+              style={({ pressed }) => [styles.settingsMenuItem, pressed && styles.pressed]}
+              testID="settings-menu-llm-log"
+            >
+              <Text style={styles.settingsMenuItemText}>LLM log</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setMenuOpen(false);
                 setApiPanelOpen(true);
                 setApiStatusMessage(null);
               }}
@@ -276,6 +288,40 @@ export default function MyNotesScreen() {
                 variant="secondary"
               />
             </View>
+
+            <KiwiButton
+              label="Reset local data"
+              loading={isResettingLocalData}
+              onPress={() => {
+                Alert.alert(
+                  'Reset local data?',
+                  'This will permanently remove local notes, cards, review history, and custom subjects on this device.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Reset data',
+                      style: 'destructive',
+                      onPress: () => {
+                        setIsResettingLocalData(true);
+                        try {
+                          clearLocalDemoData();
+                          loadSubjects();
+                          setApiStatusMessage(
+                            'Local data reset complete. Default General subject and demo note were recreated.'
+                          );
+                        } catch {
+                          setApiStatusMessage('Could not reset local data.');
+                        } finally {
+                          setIsResettingLocalData(false);
+                        }
+                      },
+                    },
+                  ]
+                );
+              }}
+              style={styles.resetDataButton}
+              variant="secondary"
+            />
 
             <Text style={styles.apiHint}>
               {hasSavedKey ? 'A key is currently saved.' : 'No key saved yet.'}
@@ -408,6 +454,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_400Regular',
     fontSize: 12,
     marginTop: 12,
+  },
+  resetDataButton: {
+    marginTop: 10,
+    minHeight: 44,
   },
   apiStatus: {
     color: KIWI_THEME.colors.textPrimary,
