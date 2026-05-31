@@ -196,7 +196,6 @@ export async function organizeNoteWithGemini(inputText: string): Promise<Organiz
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     generationConfig: {
       temperature: 0.2,
-      responseMimeType: 'application/json',
     },
   };
 
