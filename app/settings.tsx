@@ -14,6 +14,9 @@ import {
   testGeminiConnection,
 } from '../utils/llm';
 
+type RequestStatus = 'idle' | 'sent' | 'success' | 'error';
+type ResponseStatus = 'none' | 'waiting' | 'received';
+
 export default function SettingsScreen() {
   const router = useRouter();
   const [apiKey, setApiKey] = useState('');
@@ -24,12 +27,18 @@ export default function SettingsScreen() {
   const [isTesting, setIsTesting] = useState(false);
   const [isClearingKey, setIsClearingKey] = useState(false);
   const [isClearingData, setIsClearingData] = useState(false);
+  const [keyStatus, setKeyStatus] = useState<'empty' | 'added'>('empty');
+  const [requestStatus, setRequestStatus] = useState<RequestStatus>('idle');
+  const [responseStatus, setResponseStatus] = useState<ResponseStatus>('none');
+  const [lastApiMessage, setLastApiMessage] = useState<string>('No API call yet.');
+  const [lastApiTimestamp, setLastApiTimestamp] = useState<string | null>(null);
 
   const loadSettings = useCallback(async () => {
     try {
       const savedKey = await getGeminiApiKey();
       setApiKey(savedKey ?? '');
       setHasSavedKey(Boolean(savedKey));
+      setKeyStatus(savedKey ? 'added' : 'empty');
       setStatusMessage(null);
     } catch {
       setStatusMessage('Could not read saved settings.');
@@ -86,6 +95,7 @@ export default function SettingsScreen() {
                 try {
                   await saveGeminiApiKey(trimmed);
                   setHasSavedKey(true);
+                  setKeyStatus('added');
                   setStatusMessage('API key saved.');
                 } catch (error) {
                   setStatusMessage(
@@ -105,10 +115,35 @@ export default function SettingsScreen() {
               label="Test connection"
               loading={isTesting}
               onPress={async () => {
+                const keyToTest = apiKey.trim();
+                if (!keyToTest) {
+                  setKeyStatus('empty');
+                  setRequestStatus('idle');
+                  setResponseStatus('none');
+                  setLastApiMessage('API key is empty. Save a key before testing.');
+                  setStatusMessage('API key cannot be empty.');
+                  return;
+                }
+
+                setKeyStatus('added');
+                setRequestStatus('sent');
+                setResponseStatus('waiting');
+                setLastApiMessage('API request sent.');
+                setStatusMessage('API request sent.');
                 setIsTesting(true);
                 try {
-                  const result = await testGeminiConnection(apiKey.trim());
+                  const result = await testGeminiConnection(keyToTest);
+                  setRequestStatus(result.ok ? 'success' : 'error');
+                  setResponseStatus('received');
+                  setLastApiMessage(result.message);
+                  setLastApiTimestamp(new Date().toLocaleString());
                   setStatusMessage(result.message);
+                } catch {
+                  setRequestStatus('error');
+                  setResponseStatus('none');
+                  setLastApiMessage('API request failed before response.');
+                  setLastApiTimestamp(new Date().toLocaleString());
+                  setStatusMessage('Could not test Gemini connection.');
                 } finally {
                   setIsTesting(false);
                 }
@@ -126,6 +161,11 @@ export default function SettingsScreen() {
                   await clearGeminiApiKey();
                   setApiKey('');
                   setHasSavedKey(false);
+                  setKeyStatus('empty');
+                  setRequestStatus('idle');
+                  setResponseStatus('none');
+                  setLastApiMessage('No API call yet.');
+                  setLastApiTimestamp(null);
                   setStatusMessage('Saved key removed.');
                 } catch {
                   setStatusMessage('Could not clear saved key.');
@@ -142,6 +182,51 @@ export default function SettingsScreen() {
             {hasSavedKey ? 'A key is saved for this device.' : 'No API key saved yet.'}
           </Text>
           {statusMessage ? <Text style={styles.status}>{statusMessage}</Text> : null}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>LLM troubleshooting</Text>
+          <Text style={styles.cardBody}>
+            Use these statuses to debug key storage and Gemini API connectivity.
+          </Text>
+
+          <View style={styles.diagnosticRow}>
+            <Text style={styles.diagnosticLabel}>Key status</Text>
+            <Text style={styles.diagnosticValue}>
+              {keyStatus === 'added' ? 'Key added' : 'Key empty'}
+            </Text>
+          </View>
+          <View style={styles.diagnosticRow}>
+            <Text style={styles.diagnosticLabel}>API request</Text>
+            <Text style={styles.diagnosticValue}>
+              {requestStatus === 'idle'
+                ? 'Not sent'
+                : requestStatus === 'sent'
+                  ? 'Sent'
+                  : requestStatus === 'success'
+                    ? 'Success'
+                    : 'Failed'}
+            </Text>
+          </View>
+          <View style={styles.diagnosticRow}>
+            <Text style={styles.diagnosticLabel}>API response</Text>
+            <Text style={styles.diagnosticValue}>
+              {responseStatus === 'none'
+                ? 'Not received'
+                : responseStatus === 'waiting'
+                  ? 'Waiting'
+                  : 'Received'}
+            </Text>
+          </View>
+          <Text style={styles.hint}>Last API message: {lastApiMessage}</Text>
+          {lastApiTimestamp ? <Text style={styles.hint}>Last checked: {lastApiTimestamp}</Text> : null}
+
+          <KiwiButton
+            label="Open LLM logs"
+            onPress={() => router.push('/llm-log')}
+            style={styles.logButton}
+            variant="secondary"
+          />
         </View>
 
         <View style={styles.card}>
@@ -249,6 +334,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Nunito_500Medium',
     fontSize: 12,
     marginTop: 4,
+  },
+  diagnosticRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  diagnosticLabel: {
+    color: KIWI_THEME.colors.textSecondary,
+    fontFamily: 'Nunito_500Medium',
+    fontSize: 13,
+  },
+  diagnosticValue: {
+    color: KIWI_THEME.colors.textPrimary,
+    fontFamily: 'Nunito_600SemiBold',
+    fontSize: 13,
+  },
+  logButton: {
+    marginTop: 12,
   },
   dangerButton: {
     marginTop: 12,

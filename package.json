@@ -24,9 +24,9 @@
     "ts-fsrs": "^5.4.1"
   },
   "devDependencies": {
-    "@types/react": "~19.2.2",
+    "@types/react": "~19.1.10",
     "babel-preset-expo": "~54.0.0",
-    "typescript": "~6.0.3"
+    "typescript": "~5.9.2"
   },
   "scripts": {
     "start": "expo start",
