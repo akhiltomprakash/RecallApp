@@ -35,7 +35,42 @@ Then choose one target:
 - A default `General` subject is auto-created if no subjects exist.
 - Demo quantum note + linked flashcards are seeded in `General`.
 
-## 5) Optional AI setup (Gemini)
+## 5) Pre-made study libraries
+
+The app reads pre-made study packs from the local `JSON libraries/` folder.
+
+- Open **Settings**
+- Tap **Load libraries**
+- Browse the library list
+- Tap **Load** to import a library as a subject
+- Tap **Dismiss** to remove a loaded library from the device
+
+Library sync runs automatically before launch via `npm run sync:libraries`.
+
+### Library naming
+
+- Subject names are derived from the JSON content, not the file name.
+- The current rule is `Class + Subject + Chapter Title`.
+- Example: `Class 12 History - Bricks, Beads and Bones (The Harappan Civilisation)`
+- The app keeps legacy generic names recognized so older loaded data can still be dismissed after a rename.
+
+### JSON requirements
+
+Each file should include:
+
+- `class`
+- `board`
+- `subject`
+- `chapter_title`
+- `chapter_summary`
+- `topics` with topic notes, key terms, timeline items, and flashcards
+
+Flashcards can use:
+
+- `front` / `back` for normal cards
+- `text` / `back_extra` for cloze-style entries
+
+## 6) Optional AI setup (Gemini)
 
 Inside the app:
 
@@ -47,7 +82,7 @@ Inside the app:
 
 If key is missing or request fails, app falls back to non-AI flashcard creation.
 
-## 6) Useful scripts
+## 7) Useful scripts
 
 ```bash
 npm run start
@@ -56,7 +91,7 @@ npm run android
 npm run web
 ```
 
-## 7) Troubleshooting
+## 8) Troubleshooting
 
 ### Metro cache issues
 
@@ -77,7 +112,7 @@ rm -rf node_modules package-lock.json
 npm install
 ```
 
-## 8) For collaborators/agents
+## 9) For collaborators/agents
 
 - Keep changes scoped to `RecallApp/`.
 - Run type check before opening PR:
@@ -89,4 +124,3 @@ npx tsc --noEmit
 - If testing AI note generation, verify:
   - API key save + test succeeds
   - note creation path logs entries in **LLM log** screen
-

@@ -177,6 +177,40 @@ export function getSubjectIconOptions(): SubjectIconOption[] {
   return [...subjectIconOptions];
 }
 
+export function getSubjectByName(name: string): SubjectRow | null {
+  const subjectName = normalizeText(name);
+  if (!subjectName) {
+    return null;
+  }
+
+  return (
+    db.getFirstSync<SubjectRow>(
+      `SELECT
+         id,
+         name,
+         description,
+         COALESCE(icon_key, ?) AS iconKey,
+         COALESCE(color_key, ?) AS colorKey,
+         created_at AS createdAt
+       FROM decks
+       WHERE lower(name) = lower(?)
+       LIMIT 1;`,
+      [defaultSubjectIcon.iconKey, defaultSubjectIcon.colorKey, subjectName]
+    ) ?? null
+  );
+}
+
+export function getSubjectByNames(names: string[]): SubjectRow | null {
+  for (const name of names) {
+    const subject = getSubjectByName(name);
+    if (subject) {
+      return subject;
+    }
+  }
+
+  return null;
+}
+
 export function createSubject(
   name: string,
   description: string = '',
@@ -198,6 +232,10 @@ export function createSubject(
   );
 
   return result.lastInsertRowId;
+}
+
+export function deleteSubject(subjectId: number): void {
+  db.runSync('DELETE FROM decks WHERE id = ?;', [subjectId]);
 }
 
 export function getSubjects(): SubjectSummary[] {

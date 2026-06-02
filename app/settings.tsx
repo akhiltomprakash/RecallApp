@@ -185,6 +185,18 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.card}>
+          <Text style={styles.cardTitle}>Libraries</Text>
+          <Text style={styles.cardBody}>
+            Browse pre-made study libraries and manage the ones already added to this device.
+          </Text>
+          <KiwiButton
+            label="Load libraries"
+            onPress={() => router.push('/libraries')}
+            style={styles.libraryButton}
+          />
+        </View>
+
+        <View style={styles.card}>
           <Text style={styles.cardTitle}>LLM troubleshooting</Text>
           <Text style={styles.cardBody}>
             Use these statuses to debug key storage and Gemini API connectivity.
@@ -352,6 +364,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   logButton: {
+    marginTop: 12,
+  },
+  libraryButton: {
     marginTop: 12,
   },
   dangerButton: {

@@ -29,9 +29,14 @@
     "typescript": "~5.9.2"
   },
   "scripts": {
+    "sync:libraries": "node scripts/sync-library-catalog.mjs",
+    "prestart": "npm run sync:libraries",
     "start": "expo start",
+    "preandroid": "npm run sync:libraries",
     "android": "expo start --android",
+    "preios": "npm run sync:libraries",
     "ios": "expo start --ios",
+    "preweb": "npm run sync:libraries",
     "web": "expo start --web"
   },
   "private": true

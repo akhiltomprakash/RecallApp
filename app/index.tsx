@@ -1,14 +1,16 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
-import KiwiBottomNav from '../components/KiwiBottomNav';
+import KiwiBottomNav, { type KiwiBottomTab } from '../components/KiwiBottomNav';
 import KiwiButton from '../components/KiwiButton';
 import KiwiScreen from '../components/KiwiScreen';
 import KiwiTopBar from '../components/KiwiTopBar';
@@ -30,11 +32,22 @@ const emptyStats: ReviewHomeStats = {
 };
 
 export default function HomeScreen() {
+  return <HomeTabsScreen initialTab="revise" />;
+}
+
+type HomeTabsScreenProps = {
+  initialTab?: KiwiBottomTab;
+};
+
+export function HomeTabsScreen({ initialTab = 'revise' }: HomeTabsScreenProps) {
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
   const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
   const [stats, setStats] = useState<ReviewHomeStats>(emptyStats);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<KiwiBottomTab>(initialTab);
+  const tabProgress = useRef(new Animated.Value(initialTab === 'my-notes' ? 1 : 0)).current;
 
   const loadData = useCallback((refresh = false) => {
     if (refresh) {
@@ -63,85 +76,165 @@ export default function HomeScreen() {
   );
 
   const hasDueCards = stats.totalDueToday > 0;
+  const viewportWidth = Math.max(screenWidth, 1);
+  const totalNotes = useMemo(
+    () => subjects.reduce((sum, subject) => sum + subject.noteCount, 0),
+    [subjects]
+  );
   const summaryCountText = useMemo(() => {
     return `${stats.totalDueToday}`;
   }, [stats.totalDueToday]);
+  const translateX = Animated.multiply(tabProgress, -viewportWidth);
+
+  const switchTab = useCallback(
+    (nextTab: KiwiBottomTab) => {
+      if (nextTab === activeTab) {
+        return;
+      }
+
+      setActiveTab(nextTab);
+      Animated.timing(tabProgress, {
+        toValue: nextTab === 'my-notes' ? 1 : 0,
+        duration: 240,
+        useNativeDriver: true,
+      }).start();
+    },
+    [activeTab, tabProgress]
+  );
 
   return (
     <KiwiScreen>
       <KiwiTopBar
         onSettingsPress={() => router.push('/settings')}
-        title="Revise"
+        title={activeTab === 'revise' ? 'Revise' : 'My Notes'}
       />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            onRefresh={() => loadData(true)}
-            refreshing={isRefreshing}
-            tintColor={KIWI_THEME.colors.textPrimary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryCount}>{summaryCountText}</Text>
-          <Text style={styles.summaryLabel}>cards due today</Text>
-          <KiwiButton
-            disabled={!hasDueCards}
-            fullWidth={false}
-            label="Start Revising"
-            onPress={() => router.push('/review')}
-            style={styles.summaryButton}
-          />
-          <Text style={styles.streakText}>
-            {stats.streak > 0 ? `${stats.streak} day streak` : 'Build your streak'}
-          </Text>
-        </View>
+      <View style={styles.tabViewport}>
+        <Animated.View
+          style={[
+            styles.tabTrack,
+            {
+              width: viewportWidth * 2,
+              transform: [{ translateX }],
+            },
+          ]}
+        >
+          <View style={[styles.tabPage, { width: viewportWidth }]}>
+            <ScrollView
+              contentContainerStyle={styles.scrollContent}
+              refreshControl={
+                <RefreshControl
+                  onRefresh={() => loadData(true)}
+                  refreshing={isRefreshing}
+                  tintColor={KIWI_THEME.colors.textPrimary}
+                />
+              }
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryCount}>{summaryCountText}</Text>
+                <Text style={styles.summaryLabel}>cards due today</Text>
+                <KiwiButton
+                  disabled={!hasDueCards}
+                  fullWidth={false}
+                  label="Start Revising"
+                  onPress={() => router.push('/review')}
+                  style={styles.summaryButton}
+                />
+                <Text style={styles.streakText}>
+                  {stats.streak > 0 ? `${stats.streak} day streak` : 'Build your streak'}
+                </Text>
+              </View>
 
-        {subjects.length === 0 && !isLoading ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No subjects yet</Text>
-            <Text style={styles.emptyDescription}>
-              Create your first subject to start adding notes and flashcards.
-            </Text>
-            <KiwiButton
-              label="Create subject"
-              onPress={() => router.push('/create-subject')}
-              style={styles.emptyButton}
-            />
+              {subjects.length === 0 && !isLoading ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyTitle}>No subjects yet</Text>
+                  <Text style={styles.emptyDescription}>
+                    Create your first subject to start adding notes and flashcards.
+                  </Text>
+                  <KiwiButton
+                    label="Create subject"
+                    onPress={() => router.push('/create-subject')}
+                    style={styles.emptyButton}
+                  />
+                </View>
+              ) : (
+                subjects.map((subject) => {
+                  const dueLabel =
+                    subject.dueCount === 0 ? 'All caught up' : `${subject.dueCount} due`;
+
+                  return (
+                    <SubjectCard
+                      iconKey={subject.iconKey}
+                      key={subject.id}
+                      onPress={() => {
+                        if (subject.dueCount > 0) {
+                          router.push({
+                            pathname: '/review',
+                            params: {
+                              subjectId: String(subject.id),
+                              subjectName: subject.name,
+                            },
+                          });
+                          return;
+                        }
+
+                        router.push(`/subject/${subject.id}`);
+                      }}
+                      subtitle={dueLabel}
+                      title={subject.name}
+                    />
+                  );
+                })
+              )}
+            </ScrollView>
           </View>
-        ) : (
-          subjects.map((subject) => {
-            const dueLabel =
-              subject.dueCount === 0 ? 'All caught up' : `${subject.dueCount} due`;
 
-            return (
-              <SubjectCard
-                iconKey={subject.iconKey}
-                key={subject.id}
-                onPress={() => {
-                  if (subject.dueCount > 0) {
-                    router.push({
-                      pathname: '/review',
-                      params: {
-                        subjectId: String(subject.id),
-                        subjectName: subject.name,
-                      },
-                    });
-                    return;
-                  }
+          <View style={[styles.tabPage, { width: viewportWidth }]}>
+            <ScrollView
+              contentContainerStyle={styles.notesContent}
+              refreshControl={
+                <RefreshControl
+                  onRefresh={() => loadData(true)}
+                  refreshing={isRefreshing}
+                  tintColor={KIWI_THEME.colors.textPrimary}
+                />
+              }
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.subtitle}>
+                {subjects.length} Subjects · {totalNotes} notes
+              </Text>
 
-                  router.push(`/subject/${subject.id}`);
-                }}
-                subtitle={dueLabel}
-                title={subject.name}
-              />
-            );
-          })
-        )}
-      </ScrollView>
+              {subjects.length === 0 && !isLoading ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyTitle}>No subjects yet</Text>
+                  <Text style={styles.emptyDescription}>
+                    Create a subject and start collecting your notes.
+                  </Text>
+                  <KiwiButton
+                    label="Create subject"
+                    onPress={() => router.push('/create-subject')}
+                    style={styles.emptyButton}
+                  />
+                </View>
+              ) : (
+                subjects.map((subject) => {
+                  return (
+                    <SubjectCard
+                      iconKey={subject.iconKey}
+                      key={subject.id}
+                      onPress={() => router.push(`/subject/${subject.id}`)}
+                      subtitle={`${subject.noteCount} notes`}
+                      title={subject.name}
+                    />
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        </Animated.View>
+      </View>
 
       <View pointerEvents="box-none" style={styles.fabLayer}>
         <KiwiButton
@@ -153,11 +246,9 @@ export default function HomeScreen() {
       </View>
 
       <KiwiBottomNav
-        activeTab="revise"
+        activeTab={activeTab}
         onTabPress={(tab) => {
-          if (tab === 'my-notes') {
-            router.push('/my-notes');
-          }
+          switchTab(tab);
         }}
       />
     </KiwiScreen>
@@ -165,11 +256,34 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  tabViewport: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  tabTrack: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  tabPage: {
+    flex: 1,
+  },
   scrollContent: {
     gap: 20,
     paddingBottom: 140,
     paddingHorizontal: 16,
     paddingTop: 16,
+  },
+  notesContent: {
+    gap: 20,
+    paddingBottom: 140,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+  subtitle: {
+    color: KIWI_THEME.colors.textSecondary,
+    fontFamily: 'Nunito_500Medium',
+    fontSize: 17,
+    letterSpacing: 0,
   },
   summaryCard: {
     ...KIWI_THEME.shadows.card,

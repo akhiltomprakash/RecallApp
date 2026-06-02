@@ -9,6 +9,7 @@ RecallApp is an Expo + React Native study app for capturing notes, generating fl
 - Optional Gemini-powered note organization and flashcard generation
 - FSRS-style review flow with due cards and review history
 - LLM logs screen for debugging AI generation attempts
+- JSON-backed library loader for pre-made subjects
 - Local-first storage using SQLite and secure key storage
 
 ## Tech Stack
@@ -41,6 +42,31 @@ On first launch, the app initializes SQLite tables and creates default local con
 - `General` subject
 - Pre-seeded `Quantum Computing Basics` note
 - Linked demo flashcards under that note
+
+## Study Libraries
+
+RecallApp can load pre-made study libraries from the local `JSON libraries/` folder.
+
+- Open **Settings**
+- Tap **Load libraries**
+- Browse the available library list
+- Tap **Load** to add a library as a subject
+- Tap **Dismiss** to remove a loaded library from the device
+
+Library files are synced automatically at app start through `npm run sync:libraries`, which runs before `npm run start`, `npm run ios`, `npm run android`, and `npm run web`.
+
+Library naming rules:
+
+- Subject title comes from the JSON content using `Class + Subject + Chapter Title`
+- Example: `Class 12 Biology - Microbes in Human Welfare`
+- Legacy generic names are still recognized so already-loaded libraries can be dismissed after a rename
+
+Supported JSON shape:
+
+- `class`, `board`, `subject`, `chapter_title`
+- `chapter_summary`
+- `topics[]` with `topic_title`, `topic_note`, `key_terms`, `timeline_items`, and `flashcards`
+- Flashcards may be `basic`, `reverse`, or `cloze` style entries
 
 ## Gemini API Setup (Optional)
 

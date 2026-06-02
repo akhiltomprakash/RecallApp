@@ -1,0 +1,339 @@
+{
+  "class": "Class 12",
+  "board": "CBSE",
+  "subject": "History",
+  "chapter_number": 1,
+  "chapter_title": "Bricks, Beads and Bones (The Harappan Civilisation)",
+  "source_scope": "Comprehensive study pack combining initial and expanded analysis of Class 12 History Chapter 1 pages",
+  "chapter_summary": "This comprehensive pack explores the archaeological evidence of the Harappan Civilization. It examines the timeline, geographical spread, highly organized urban planning (grid system and drainage), distinctive architectural features (Citadel vs. Lower Town), subsistence strategies, social stratification inferred from artifacts, and the specialized craft production that defined this ancient society.",
+  "topics": [
+    {
+      "topic_title": "Introduction and Timeline of Harappan Civilisation",
+      "topic_note": "The Harappan Civilization (Indus Valley Civilisation) spanned from 6000 BCE to 1300 BCE. It is divided into three phases: Early Harappan (formative), Mature Harappan (most prosperous), and Late Harappan (decadent). Archaeological evidence allows us to interpret the lives of these people.",
+      "key_terms": [
+        {
+          "Term": "Indus Valley Civilisation",
+          "Definition": "Another name for the Harappan Civilization."
+        },
+        {
+          "Term": "Early Harappan",
+          "Definition": "The formative phase (6000 BCE-2600 BCE)."
+        },
+        {
+          "Term": "Mature Harappan",
+          "Definition": "The most prosperous phase (2600 BCE-1900 BCE)."
+        }
+      ],
+      "timeline_items": [
+        {
+          "date_or_period": "6000 BCE - 1300 BCE",
+          "event_or_detail": "Total time span of the Harappan Civilisation."
+        },
+        {
+          "date_or_period": "6000 BCE - 2600 BCE",
+          "event_or_detail": "Early Harappan phase (formative)."
+        },
+        {
+          "date_or_period": "2600 BCE - 1900 BCE",
+          "event_or_detail": "Mature Harappan phase (most prosperous)."
+        }
+      ],
+      "flashcards": [
+        {
+          "type": "basic",
+          "front": "What is the total time span of the Harappan Civilisation?",
+          "back": "6000 BCE to 1300 BCE.",
+          "difficulty": "easy",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "timeline"]
+        },
+        {
+          "type": "reverse",
+          "front": "What is the Mature Harappan phase of the civilisation?",
+          "back": "The most prosperous phase (2600 BCE - 1900 BCE).",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "topic-name"]
+        },
+        {
+          "type": "cloze",
+          "text": "The Harappan Civilisation is also known as the {{c1::Indus Valley Civilisation}}.",
+          "back_extra": "Use cloze cards for dates, places, terms, source details, and key historical claims.",
+          "difficulty": "easy",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "terminology"]
+        },
+        {
+          "type": "basic",
+          "front": "What is the significance of Harappa in the context of the civilization?",
+          "back": "It is derived from the place where the civilization was identified.",
+          "difficulty": "easy",
+          "exam_importance": "medium",
+          "tags": ["class12", "history", "chapter-1", "terminology"]
+        }
+      ]
+    },
+    {
+      "topic_title": "Geographical Spread and Major Sites",
+      "topic_note": "Harappan artifacts are found across a vast region including Pakistan (Afghanistan, Baluchistan, Sind, Punjab) and various Indian states (Gujarat, Rajasthan, UP, Haryana, Maharashtra). Major sites include Mohenjodaro, Harappa, Dholavira, Rakhigarhi, and Lothal.",
+      "key_terms": [
+        {
+          "Term": "Harappan Sites",
+          "Definition": "Archaeological locations where Harappan material has been found."
+        }
+      ],
+      "timeline_items": [
+        {
+          "date_or_period": "N/A",
+          "event_or_detail": "Sites were found across the Indus and Saraswati river basins."
+        }
+      ],
+      "flashcards": [
+        {
+          "type": "basic",
+          "front": "Which regions were known to have Harappan artifacts?",
+          "back": "Afghanistan, Baluchistan, Sind, Punjab provinces of Pakistan, and Indian States (e.g., Gujarat, Rajasthan).",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "geography"]
+        },
+        {
+          "type": "basic",
+          "front": "Name five important Mature Harappan sites mentioned in the text.",
+          "back": "Mohenjodaro, Harappa, Dholavira, Rakhigarhi, and Ganweriwala (among others).",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "sites"]
+        },
+        {
+          "type": "cloze",
+          "text": "The distinctive Harappan pottery, bricks, seals, weights, and beads have been found in regions like Afghanistan, Baluchistan, Sind, and {{c1::Punjab}} provinces of Pakistan.",
+          "back_extra": "Use cloze cards for dates, places, terms, source details, and key historical claims.",
+          "difficulty": "easy",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "geography"]
+        }
+      ]
+    },
+    {
+      "topic_title": "Subsistence Strategies and Agricultural Evidence",
+      "topic_note": "Harappans ate a wide range of plant and animal products, including wheat, barley, lentils, chickpeas, sesame, and millets. Animal remains include cattle, sheep, goat, buffalo, pig (domesticated) and wild species (boar, deer). Agricultural evidence includes terracotta models of the plough and evidence of ploughed fields.",
+      "key_terms": [
+        {
+          "Term": "Archaeo-botanists",
+          "Definition": "Specialists in ancient plant remains studied from charred grains and seeds."
+        }
+      ],
+      "timeline_items": [
+        {
+          "date_or_period": "N/A",
+          "event_or_detail": "Dietary practices reconstructed from finds of charred grains and seeds."
+        }
+      ],
+      "flashcards": [
+        {
+          "type": "basic",
+          "front": "What were the primary plant products found in Harappan sites?",
+          "back": "Wheat, barley, lentil, chickpea, and sesame.",
+          "difficulty": "easy",
+          "exam_importance": "medium",
+          "tags": ["class12", "history", "chapter-1", "diet"]
+        },
+        {
+          "type": "basic",
+          "front": "What types of animal bones were found at Harappan sites?",
+          "back": "Cattle, sheep, goat, buffalo, and pig (domesticated), as well as wild species like boar and deer.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "fauna"]
+        },
+        {
+          "type": "basic",
+          "front": "How do archaeologists reconstruct Harappan dietary practices?",
+          "back": "By studying finds of charred grains and seeds, studied by archaeo-botanists.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "methodology"]
+        },
+        {
+          "type": "basic",
+          "front": "What evidence suggests the use of ploughing in Harappan agriculture?",
+          "back": "Terracotta models of the plough and evidence of a ploughed field at Kalibangan.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "agriculture"]
+        }
+      ]
+    },
+    {
+      "topic_title": "Urban Planning and Architecture (Mohenjodaro)",
+      "topic_note": "Harappan settlements were highly planned, featuring a distinct separation between the Citadel (public/ritual, walled) and the Lower Town (residential). Cities featured grid-patterned streets with integrated drainage systems. Domestic architecture involved courtyards, private bathrooms, and wells.",
+      "key_terms": [
+        {
+          "Term": "Citadel",
+          "Definition": "The smaller, higher part of a settlement, usually walled and used for public purposes."
+        },
+        {
+          "Term": "Lower Town",
+          "Definition": "The larger, lower section where residential buildings were located."
+        }
+      ],
+      "timeline_items": [
+        {
+          "date_or_period": "N/A",
+          "event_or_detail": "Settlements were planned and then implemented according to a fixed layout."
+        }
+      ],
+      "flashcards": [
+        {
+          "type": "basic",
+          "front": "How was the city of Mohenjodaro divided architecturally?",
+          "back": "It was divided into the Citadel (smaller, higher) and the Lower Town (larger, lower).",
+          "difficulty": "easy",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "architecture"]
+        },
+        {
+          "type": "basic",
+          "front": "What was the distinctive feature of Harappan city planning regarding streets and drains?",
+          "back": "Roads and streets were laid out in an approximate 'grid' pattern, intersecting at right angles.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "planning"]
+        },
+        {
+          "type": "basic",
+          "front": "What material were the buildings in the Citadel often constructed upon?",
+          "back": "Mud brick platforms.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "architecture"]
+        },
+        {
+          "type": "basic",
+          "front": "What was the purpose of the Great Bath found in the Citadel?",
+          "back": "It was a large rectangular tank meant for some kind of special ritual bath.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "architecture"]
+        },
+        {
+          "type": "basic",
+          "front": "What did the drainage system suggest about Harappan planning?",
+          "back": "It suggested careful urban planning and a concern for sanitation, as every house was connected to street drains.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "planning"]
+        }
+      ]
+    },
+    {
+      "topic_title": "Social Differences and Artefact Classification",
+      "topic_note": "Archaeologists infer social differences by studying burials (e.g., pit lining) and artefacts. Utilitarian objects are those made from ordinary materials (stone/clay), while Luxuries are rare, made from costly materials or complex technology. The distribution of luxuries reveals social hierarchy, with rare items concentrated in large urban centres.",
+      "key_terms": [
+        {
+          "Term": "Utilitarian Objects",
+          "Definition": "Objects of daily use made easily out of ordinary materials like stone or clay."
+        },
+        {
+          "Term": "Luxuries",
+          "Definition": "Objects that are rare, made from costly/non-local materials (like faience), or require complex technologies."
+        }
+      ],
+      "timeline_items": [
+        {
+          "date_or_period": "N/A",
+          "event_or_detail": "Luxury objects were concentrated in large settlements (Mohenjodaro) rather than small ones (Kalibangan)."
+        }
+      ],
+      "flashcards": [
+        {
+          "type": "basic",
+          "front": "How do archaeologists study burials to identify social differences?",
+          "back": "By studying the way burial pits were made, such as whether they were lined with bricks.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "social"]
+        },
+        {
+          "type": "basic",
+          "front": "What is the main difference between Utilitarian objects and Luxuries?",
+          "back": "Utilitarian objects are made from ordinary materials (stone/clay); Luxuries are rare, made from costly/non-local materials, or require complex technology.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "classification"]
+        },
+        {
+          "type": "basic",
+          "front": "Where were luxury items like miniature pots of faience generally concentrated?",
+          "back": "In large settlements like Mohenjodaro and Harappa, not in smaller settlements.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "social"]
+        },
+        {
+          "type": "basic",
+          "front": "What kind of material was considered precious (e.g., for beads)?",
+          "back": "Faience (made of ground sand/silica mixed with color) was considered precious because it was difficult to make.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "artefacts"]
+        }
+      ]
+    },
+    {
+      "topic_title": "Craft Production and Specialization in the Region",
+      "topic_note": "Settlements like Chanhudaro were specialized centres dedicated almost exclusively to craft production (bead-making, shell-cutting). Coastal areas (Nageshwar, Balakot) were specialized for shell objects. Finished products often moved from these specialized centers to large urban hubs like Mohenjodaro and Harappa.",
+      "key_terms": [
+        {
+          "Term": "Specialized Centres",
+          "Definition": "Settlements focused on making a specific craft, such as bead-making or shell-cutting."
+        },
+        {
+          "Term": "Trade Flow",
+          "Definition": "The movement of finished products from specialized production centers to large urban centres."
+        }
+      ],
+      "timeline_items": [
+        {
+          "date_or_period": "N/A",
+          "event_or_detail": "Specialized centres like Chanhudaro and Lothal produced goods that were transported to major urban centers."
+        }
+      ],
+      "flashcards": [
+        {
+          "type": "basic",
+          "front": "Which Harappan settlement was known primarily for craft production?",
+          "back": "Chanhudaro.",
+          "difficulty": "easy",
+          "exam_importance": "medium",
+          "tags": ["class12", "history", "chapter-1", "crafts"]
+        },
+        {
+          "type": "basic",
+          "front": "Which coastal settlements specialized in making shell objects like bangles and ladles?",
+          "back": "Nageshwar and Balakot.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "crafts"]
+        },
+        {
+          "type": "basic",
+          "front": "What type of materials were used to make Harappan beads?",
+          "back": "Stones (carnelian, jasper), metals (copper, bronze, gold), shell, faience, and terracotta.",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "artefacts"]
+        },
+        {
+          "type": "basic",
+          "front": "What was the flow of trade for finished Harappan goods?",
+          "back": "Finished products were taken from specialized production centers (like Chanhudaro) to large urban centres (like Mohenjodaro).",
+          "difficulty": "medium",
+          "exam_importance": "high",
+          "tags": ["class12", "history", "chapter-1", "trade"]
+        }
+      ]
+    }
+  ]
+}
