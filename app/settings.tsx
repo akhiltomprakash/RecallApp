@@ -1,32 +1,63 @@
 import React, { useCallback, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import KiwiButton from '../components/KiwiButton';
 import KiwiScreen from '../components/KiwiScreen';
 import KiwiTopBar from '../components/KiwiTopBar';
 import { KIWI_THEME } from '../constants/theme';
-import { clearLocalDemoData } from '../db/queries';
 import {
   clearGeminiApiKey,
   getGeminiApiKey,
   saveGeminiApiKey,
   testGeminiConnection,
 } from '../utils/llm';
+import {
+  DEFAULT_REVIEW_FEEDBACK_SETTINGS,
+  getReviewFeedbackSettings,
+  saveReviewFeedbackSettings,
+  type HapticLevel,
+  type ReviewFeedbackSettings,
+} from '../utils/reviewFeedbackSettings';
 
 type RequestStatus = 'idle' | 'sent' | 'success' | 'error';
 type ResponseStatus = 'none' | 'waiting' | 'received';
+
+const DEAD_ZONE_STEP = 0.05;
+const DEAD_ZONE_MIN = 0;
+const DEAD_ZONE_MAX = 0.3;
+const hapticLabels: Record<HapticLevel, string> = {
+  0: 'Off',
+  1: 'Subtle',
+  2: 'Default',
+  3: 'Strong',
+};
+
+const clamp = (value: number, min: number, max: number): number => {
+  return Math.min(Math.max(value, min), max);
+};
 
 export default function SettingsScreen() {
   const router = useRouter();
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [reviewFeedbackStatus, setReviewFeedbackStatus] = useState<string | null>(null);
+  const [reviewFeedbackSettings, setReviewFeedbackSettings] = useState<ReviewFeedbackSettings>(
+    DEFAULT_REVIEW_FEEDBACK_SETTINGS
+  );
   const [hasSavedKey, setHasSavedKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isClearingKey, setIsClearingKey] = useState(false);
-  const [isClearingData, setIsClearingData] = useState(false);
   const [keyStatus, setKeyStatus] = useState<'empty' | 'added'>('empty');
   const [requestStatus, setRequestStatus] = useState<RequestStatus>('idle');
   const [responseStatus, setResponseStatus] = useState<ResponseStatus>('none');
@@ -34,16 +65,68 @@ export default function SettingsScreen() {
   const [lastApiTimestamp, setLastApiTimestamp] = useState<string | null>(null);
 
   const loadSettings = useCallback(async () => {
-    try {
-      const savedKey = await getGeminiApiKey();
-      setApiKey(savedKey ?? '');
-      setHasSavedKey(Boolean(savedKey));
-      setKeyStatus(savedKey ? 'added' : 'empty');
+    const [savedKeyResult, savedFeedbackResult] = await Promise.allSettled([
+      getGeminiApiKey(),
+      getReviewFeedbackSettings(),
+    ]);
+
+    if (savedKeyResult.status === 'fulfilled') {
+      setApiKey(savedKeyResult.value ?? '');
+      setHasSavedKey(Boolean(savedKeyResult.value));
+      setKeyStatus(savedKeyResult.value ? 'added' : 'empty');
       setStatusMessage(null);
-    } catch {
-      setStatusMessage('Could not read saved settings.');
+    } else {
+      setStatusMessage('Could not read saved API key.');
+    }
+
+    if (savedFeedbackResult.status === 'fulfilled') {
+      setReviewFeedbackSettings(savedFeedbackResult.value);
+      setReviewFeedbackStatus(null);
+    } else {
+      setReviewFeedbackStatus('Could not read experimental feedback settings.');
     }
   }, []);
+
+  const persistReviewFeedbackSettings = useCallback(
+    (updater: (current: ReviewFeedbackSettings) => ReviewFeedbackSettings) => {
+      setReviewFeedbackSettings((current) => {
+        const next = updater(current);
+        void saveReviewFeedbackSettings(next)
+          .then(() => {
+            setReviewFeedbackStatus(null);
+          })
+          .catch(() => {
+            setReviewFeedbackStatus('Could not save experimental feedback settings.');
+          });
+        return next;
+      });
+    },
+    []
+  );
+
+  const adjustDeadZone = useCallback(
+    (direction: -1 | 1) => {
+      persistReviewFeedbackSettings((current) => ({
+        ...current,
+        deadZoneRatio: clamp(
+          current.deadZoneRatio + direction * DEAD_ZONE_STEP,
+          DEAD_ZONE_MIN,
+          DEAD_ZONE_MAX
+        ),
+      }));
+    },
+    [persistReviewFeedbackSettings]
+  );
+
+  const adjustHaptics = useCallback(
+    (direction: -1 | 1) => {
+      persistReviewFeedbackSettings((current) => ({
+        ...current,
+        hapticLevel: clamp(current.hapticLevel + direction, 0, 3) as HapticLevel,
+      }));
+    },
+    [persistReviewFeedbackSettings]
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -242,48 +325,108 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Data</Text>
+          <Text style={styles.cardTitle}>Experimental review feedback</Text>
           <Text style={styles.cardBody}>
-            Clears local cards, notes, subjects, and review logs. This is destructive.
+            Replace the four review buttons with the horizontal swipe controller on the review
+            screen.
           </Text>
-          <KiwiButton
-            label="Clear local demo data"
-            loading={isClearingData}
-            onPress={() => {
-              Alert.alert(
-                'Clear local data?',
-                'This will permanently remove local notes, cards, review history, and custom subjects.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Clear data',
-                    style: 'destructive',
-                    onPress: () => {
-                      setIsClearingData(true);
-                      try {
-                        clearLocalDemoData();
-                        setStatusMessage('Local data cleared. Default General subject was recreated.');
-                      } catch {
-                        setStatusMessage('Could not clear local data.');
-                      } finally {
-                        setIsClearingData(false);
-                      }
-                    },
-                  },
-                ]
-              );
-            }}
-            style={styles.dangerButton}
-            variant="secondary"
-          />
+
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleCopy}>
+              <Text style={styles.settingLabel}>Enable swipe controller</Text>
+              <Text style={styles.hint}>
+                This applies immediately and persists across app restarts.
+              </Text>
+            </View>
+            <Switch
+              onValueChange={(value) => {
+                persistReviewFeedbackSettings((current) => ({
+                  ...current,
+                  experimentalFeedbackEnabled: value,
+                }));
+              }}
+              thumbColor={
+                reviewFeedbackSettings.experimentalFeedbackEnabled
+                  ? KIWI_THEME.colors.buttonPrimaryText
+                  : '#FFFFFF'
+              }
+              trackColor={{
+                false: KIWI_THEME.colors.borderSoft,
+                true: '#111111',
+              }}
+              value={reviewFeedbackSettings.experimentalFeedbackEnabled}
+            />
+          </View>
+
+          {reviewFeedbackSettings.experimentalFeedbackEnabled ? (
+            <>
+              <View style={styles.settingGroup}>
+                <View style={styles.settingRow}>
+                  <View>
+                    <Text style={styles.settingLabel}>Dead zone</Text>
+                    <Text style={styles.hint}>
+                      {Math.round(reviewFeedbackSettings.deadZoneRatio * 100)}% of the control.
+                    </Text>
+                  </View>
+                  <Text style={styles.settingValue}>
+                    {Math.round(reviewFeedbackSettings.deadZoneRatio * 100)}%
+                  </Text>
+                </View>
+                <View style={styles.stepperRow}>
+                  <Pressable
+                    accessibilityLabel="Decrease dead zone"
+                    hitSlop={10}
+                    onPress={() => adjustDeadZone(-1)}
+                    style={({ pressed }) => [styles.stepperButton, pressed && styles.stepperPressed]}
+                  >
+                    <Text style={styles.stepperButtonText}>-</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityLabel="Increase dead zone"
+                    hitSlop={10}
+                    onPress={() => adjustDeadZone(1)}
+                    style={({ pressed }) => [styles.stepperButton, pressed && styles.stepperPressed]}
+                  >
+                    <Text style={styles.stepperButtonText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              <View style={styles.settingGroup}>
+                <View style={styles.settingRow}>
+                  <View>
+                    <Text style={styles.settingLabel}>Haptics</Text>
+                    <Text style={styles.hint}>Fires when the swipe enters a new zone.</Text>
+                  </View>
+                  <Text style={styles.settingValue}>
+                    {hapticLabels[reviewFeedbackSettings.hapticLevel]}
+                  </Text>
+                </View>
+                <View style={styles.stepperRow}>
+                  <Pressable
+                    accessibilityLabel="Decrease haptic level"
+                    hitSlop={10}
+                    onPress={() => adjustHaptics(-1)}
+                    style={({ pressed }) => [styles.stepperButton, pressed && styles.stepperPressed]}
+                  >
+                    <Text style={styles.stepperButtonText}>-</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityLabel="Increase haptic level"
+                    hitSlop={10}
+                    onPress={() => adjustHaptics(1)}
+                    style={({ pressed }) => [styles.stepperButton, pressed && styles.stepperPressed]}
+                  >
+                    <Text style={styles.stepperButtonText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </>
+          ) : null}
+
+          {reviewFeedbackStatus ? <Text style={styles.status}>{reviewFeedbackStatus}</Text> : null}
         </View>
 
-        <KiwiButton
-          label="Open Stats"
-          onPress={() => router.push('/stats')}
-          style={styles.statsButton}
-          variant="secondary"
-        />
       </ScrollView>
     </KiwiScreen>
   );
@@ -330,6 +473,60 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 10,
   },
+  toggleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 14,
+  },
+  toggleCopy: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  settingGroup: {
+    borderColor: KIWI_THEME.colors.borderSoft,
+    borderTopWidth: 1,
+    marginTop: 16,
+    paddingTop: 14,
+  },
+  settingRow: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  settingLabel: {
+    color: KIWI_THEME.colors.textPrimary,
+    fontFamily: 'Nunito_600SemiBold',
+    fontSize: 14,
+  },
+  settingValue: {
+    color: KIWI_THEME.colors.textPrimary,
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 14,
+  },
+  stepperRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  stepperButton: {
+    alignItems: 'center',
+    backgroundColor: KIWI_THEME.colors.buttonSecondary,
+    borderRadius: KIWI_THEME.radius.pill,
+    height: 38,
+    justifyContent: 'center',
+    width: 52,
+  },
+  stepperPressed: {
+    opacity: 0.85,
+  },
+  stepperButtonText: {
+    color: KIWI_THEME.colors.textPrimary,
+    fontFamily: 'Nunito_700Bold',
+    fontSize: 18,
+    lineHeight: 18,
+  },
   rowButton: {
     flex: 1,
     minHeight: 46,
@@ -368,11 +565,5 @@ const styles = StyleSheet.create({
   },
   libraryButton: {
     marginTop: 12,
-  },
-  dangerButton: {
-    marginTop: 12,
-  },
-  statsButton: {
-    marginTop: 2,
   },
 });
